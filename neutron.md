@@ -1,3 +1,25 @@
+- [[#1. Giới thiệu|1. Giới thiệu]]
+- [[#2. Các khái niệm|2. Các khái niệm]]
+	- [[#2. Các khái niệm#Provider networks|Provider networks]]
+	- [[#2. Các khái niệm#Routed provider networks|Routed provider networks]]
+	- [[#2. Các khái niệm#Self-service networks|Self-service networks]]
+	- [[#2. Các khái niệm#Subnets|Subnets]]
+	- [[#2. Các khái niệm#Subnet pools|Subnet pools]]
+	- [[#2. Các khái niệm#Ports|Ports]]
+	- [[#2. Các khái niệm#Routers|Routers]]
+	- [[#2. Các khái niệm#Security groups|Security groups]]
+	- [[#2. Các khái niệm#Extensions|Extensions]]
+	- [[#2. Các khái niệm#DHCP|DHCP]]
+	- [[#2. Các khái niệm#Metadata|Metadata]]
+	- [[#2. Các khái niệm#Linux Bridge|Linux Bridge]]
+	- [[#2. Các khái niệm#Open vSwitch|Open vSwitch]]
+	- [[#2. Các khái niệm#L3 Agent|L3 Agent]]
+	- [[#2. Các khái niệm#Network namespaces|Network namespaces]]
+	- [[#2. Các khái niệm#veth pair|veth pair]]
+	- [[#2. Các khái niệm#Overlay (tunnel) protocols|Overlay (tunnel) protocols]]
+		- [[#Overlay (tunnel) protocols#Generic routing encapsulation (GRE)|Generic routing encapsulation (GRE)]]
+		- [[#Overlay (tunnel) protocols#Virtual extensible local area network (VXLAN)|Virtual extensible local area network (VXLAN)]]
+
 # Openstack Networking - Neutron
 
 _OpenStack Networking - Neutron là một project nhằm cung cấp "Networking-as-a-Service" giữa các interface device (ví dụ: vNICs) quản lý bởi các dịch vụ Openstack khác._
@@ -102,3 +124,33 @@ L3 agent là một phần của package openstack-neutron. Nó được xem như
 
 DHCP Agent: OpenStack Networking DHCP agent chịu trách nhiệm cấp phát các địa chỉ IP cho các máy ảo chạy trên network. Nếu agent được kích hoạt và đang hoạt động khi một subnet được tạo, subnet đó mặc định sẽ được kích hoạt DHCP.
 Plugin Agent: Nhiều networking plug-ins được sử dụng cho agent của chúng, bao gồm OVS và Linux bridge. Các plug-in chỉ định agent chạy trên các node đang quản lý lưu lượng mạng, bao gồm các compute node, cũng như các nodes chạy các agent
+
+#### Network namespaces
+cho phép cô lập môi trường mạng network trong một host
+- Namespace phân chia việc sử dụng các khác niệm liên quan tới network như devices, địa chỉ addresses, ports, định tuyến và các quy tắc tường lửa vào trong một hộp (box) riêng biệt, chủ yếu là ảo hóa mạng trong một máy chạy một kernel duy nhất.
+- Mỗi network namespaces có bản định tuyến riêng, các thiết lập iptables riêng cung cấp cơ chế NAT và lọc đối với các máy ảo thuộc namespace đó. Linux network namespaces cũng cung cấp thêm khả năng để chạy các tiến trình riêng biệt trong nội bộ mỗi namespace.
+- Namespaces là tính năng của Linux kernel để cô lập và ảo hóa tài nguyên hệ thống. Network namespaces ảo hóa mạng. Trên mỗi network namespaces chứa duy nhất 1 loopback interface.  
+- Mỗi network interface (physical hoặc virtual) có duy nhất 1 namespaces và có thể di chuyển giữa các namespaces.  
+- Mỗi namespaces có 1 bộ địa chỉ IP, bảng routing, danh sách socket, firewall và các nguồn tài nguyên mạng riêng.  
+- Khi network namespaces bị hủy, nó sẽ hủy tất cả các virtual interfaces nào bên trong nó và di chuyển bất kỳ physical interfaces nào trở lại network namespaces root.
+
+#### TAP device
+Kernel virtual network devices. Mô phỏng thiết bị link layer: truyền và nhận Ethernet frame.
+TAP device gắn với user space program.
+Có thể hiểu là giao diện mạng để các VM kết nối với bridge do linux bridge tạo ra
+
+#### Veth pair
+virtual Ethernet Devices. Là tunnel giữa 2 network namespaces.  Các lưu lượng tới từ một đầu veth và được đưa ra, peer tới giao diện veth còn lại.
+
+#### Overlay (tunnel) protocols
+
+Cơ chế giúp truyền dữ liệu giữa các mạng không tương thích với nhau (khác protocols). Nó cho phép người dùng có quyền truy cập tới các network bị chặn hoặc không an toàn.
+
+##### Generic routing encapsulation (GRE)
+
+Generic routing encapsulation (GRE) là giao thức chạy trên IP, sử dụng khi các giao thức truyền và payload tương thích nhưng địa chỉ payload không tương thích. Ví dụ: 1 payload nghĩ rằng nó đang chạy trên datalink layer nhưng thực ra nó đang chạy trên transport layer sử dụng giao thức datagram thông qua IP. GRE tạo kết nối private point-to-point và hoạt động bằng cách đóng gói payload.
+GRE là giao thức nền tảng cho các giao thức tunnel khác nhưng GRE tunnel chỉ cung cấp xác thực yếu.
+
+##### Virtual extensible local area network (VXLAN)
+
+Mục đích của VXLAN là cung cấp scalable network isolation. VXLAN là " Layer 2 overlay scheme on a Layer 3 network". 
