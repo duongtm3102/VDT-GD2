@@ -1,4 +1,3 @@
-
 ### VM1-VPC1
 
 ```bash
@@ -9,15 +8,15 @@ ip route add default via 192.168.1.173
 
 ![](images/Pasted%20image%2020230821102437.png)
 
-
 ### VPN-GW1
 
 IP public 1 : 116.103.229.149
 
 File `/etc/sysctl.conf`
+
 ```
-net.ipv4.ip_forward = 1 
-net.ipv4.conf.all.accept_redirects = 0 
+net.ipv4.ip_forward = 1
+net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
 ```
 
@@ -32,11 +31,13 @@ sudo apt install strongswan -y
 ```
 
 Backup file config
+
 ```bash
 cp /etc/ipsec.conf /etc/ipsec.conf.orig
 ```
 
 Tao PSK
+
 ```
 openssl rand -base64 64
 ```
@@ -44,13 +45,12 @@ openssl rand -base64 64
 /etc/ipsec.secrets
 
 ```bash
-116.103.229.149 192.168.200.130 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJ
-DSTLEpjR9VEgL7aTwy8gLQ=="
+116.103.229.149 192.168.200.130 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJDSTLEpjR9VEgL7aTwy8gLQ=="
 ```
 
-
 ipsec.conf
-``` old
+
+```old
 config setup
         charondebug="all"
         uniqueids=yes
@@ -62,7 +62,7 @@ conn gw1-gw2
         left=116.103.229.149
         leftsubnet=192.168.1.0/24
         right=116.103.229.76
-        rightsubnet=10.10.20.0/24 
+        rightsubnet=10.10.20.0/24
         ike=aes256-sha1-modp1024!
         esp=aes256-sha1!
         aggressive=no
@@ -78,12 +78,11 @@ conn gw1-gw2
 sudo ipsec restart
 ```
 
-
 ```bash
-iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -d 10.10.20.0/24 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 10.10.20.0/24 -d 192.168.1.0/24 -j MASQUERADE
+#check
+iptables -t nat -L
 ```
-
-
 
 ```
 # basic configuration
@@ -110,19 +109,19 @@ conn gw1-gw2
 	dpdaction=restart
 	auto=start
 ```
+
 ### VPN-GW2
 
 IP public 1 : 116.103.229.76
 
-
 /etc/ipsec.secrets
 
 ```bash
-116.103.229.76 116.103.229.149 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJ
-DSTLEpjR9VEgL7aTwy8gLQ=="
+116.103.229.76 116.103.229.149 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJDSTLEpjR9VEgL7aTwy8gLQ=="
 ```
 
 ipsec.conf
+
 ```
 config setup
         charondebug="all"
@@ -135,7 +134,7 @@ conn gw1-gw2
         left=116.103.229.76
         leftsubnet=10.10.20.0/24
         right=116.103.229.149
-        rightsubnet=192.168.1.0/24 
+        rightsubnet=192.168.1.0/24
         ike=aes256-sha1-modp1024!
         esp=aes256-sha1!
         aggressive=no
@@ -152,5 +151,7 @@ ipsec restart
 ```
 
 ```bash
-iptables -t nat -A POSTROUTING -s 10.10.20.0/24 -d 192.168.1.0/24 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.1.0/24 -d 10.10.20.0/24 -j MASQUERADE
 ```
+
+https://sysadmins.co.za/setup-a-site-to-site-ipsec-vpn-with-strongswan-on-ubuntu/
