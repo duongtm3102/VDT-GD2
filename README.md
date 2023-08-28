@@ -9,3 +9,5 @@
 ### 4. DHCP Lab [Link](https://github.com/duongtm3102/VDT-GD2/tree/main/DHCPLab)
 
 ### 5. GRE Tunnel Lab [Link](https://github.com/duongtm3102/VDT-GD2/tree/main/GRETunnel)
+
+### 6. VPN IPSec Tunnel Lab [Link](https://github.com/duongtm3102/VDT-GD2/tree/main/HA-VPN-S2S)
