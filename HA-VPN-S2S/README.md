@@ -18,7 +18,7 @@
 			- [Trên VM1 - VPC1](#tr%C3%AAn-vm1---vpc1)
 			- [Trên VM2 VPC2](#tr%C3%AAn-vm2-vpc2)
 		- [2.2.3. Test](#223-test)
-- [Todo](#todo)
+
 
 
 ## 1. Giới thiệu
@@ -46,7 +46,7 @@ Nhiều VPN sử dụng IPsec protocol để thiết lập và chạy các kết
 
 ### 1.2. Strongswan 
 
-
+StrongSwan là một phần mềm mã nguồn mở cung cấp dịch vụ VPN (Virtual Private Network) dựa trên các giao thức mạng bảo mật tiêu chuẩn như IPsec (Internet Protocol Security) và IKEv2 (Internet Key Exchange version 2). Nó cho phép tạo ra các kết nối bảo mật qua mạng công cộng, cho phép truyền dữ liệu an toàn giữa các mạng và thiết bị khác nhau.
 
 ### 1.3. Keepalived
 
@@ -142,7 +142,7 @@ vrrp_instance VI_INT {
   state MASTER
   interface eth1
   virtual_router_id 55
-  priority 150
+  virtual_router_id 150
   advert_int 1
   unicast_src_ip 192.168.1.173
   unicast_peer {
@@ -160,10 +160,22 @@ vrrp_instance VI_INT {
 }
 ```
  
-**Giải thích: **
+**Giải thích:**
 
 - `vrrp_sync_group` : Nhóm các VRRP instance được đồng bộ, khi trạng thái 1 thành viên thay đổi, script `notify-ipsec.sh` sẽ được thực thi.
-- `vrrp_instance` :
+- `vrrp_instance` : các định nghĩa, cấu hình 1 keepalived instance.
+- `state` : trạng thái ban đầu
+- `interface` : chỉ định interface cho giao tiếp VRRP giữa các server.
+- `virtual_router_id` : ID cho mỗi instance, ID này phải giống nhau trên các server (cùng vrrp instance).
+- `priority` : độ ưu tiên cao hơn sẽ làm Master.
+- `unicast_src_ip`: IP của máy nguồn.
+- `unicast_peer`: IP của (các) máy *đối tác*.
+- `authentication` : Cách xác thực.
+- `virtual_ipaddress` : VIP và interface gán VIP.
+- `nopreempt`: Khi `Master` up lại thì `Slave` vẫn sẽ giữ VIP( thay vì mặc định là chuyển lại cho `Master`).
+- `garp_master_delay` : thời gian giữa các gói tin GARP (Gratuitous ARP) được gửi từ router MASTER.
+	- *Note* : https://serverfault.com/questions/653016/keepalived-configuration-for-vrrp
+	- ![](images/Pasted%20image%2020230825175741.png)
 
 
 Trên `Slave`, config file `/etc/keepalived/keepalived.conf`
@@ -512,5 +524,3 @@ Thực hiện stop/start `keepalived` trên `Master` để IPSec Tunnel thiết 
 https://sysadmins.co.za/setup-a-site-to-site-ipsec-vpn-with-strongswan-on-ubuntu/
 
 
-https://serverfault.com/questions/653016/keepalived-configuration-for-vrrp
-![](images/Pasted%20image%2020230825175741.png)
