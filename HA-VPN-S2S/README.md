@@ -1,4 +1,26 @@
 # HA VPN Site to Site
+
+- [1. Giới thiệu](#1-gi%E1%BB%9Bi-thi%E1%BB%87u)
+	- [1.1. IPSec và VPN](#11-ipsec-v%C3%A0-vpn)
+		- [IPSec là gì?](#ipsec-l%C3%A0-g%C3%AC)
+		- [VPN, IPSec VPN là gì?](#vpn-ipsec-vpn-l%C3%A0-g%C3%AC)
+	- [1.2. Strongswan](#12-strongswan)
+- [2. Thực hành](#2-th%E1%BB%B1c-h%C3%A0nh)
+	- [2.1. Mô hình](#21-m%C3%B4-h%C3%ACnh)
+		- [IPSec Tunnel](#ipsec-tunnel)
+		- [HA Gateway](#ha-gateway)
+	- [2.2. Triển khai](#22-tri%E1%BB%83n-khai)
+		- [2.2.1. HA Gateway 1](#221-ha-gateway-1)
+		- [2.2.2. IPSec Tunnel](#222-ipsec-tunnel)
+			- [Trên các `Gateway`](#tr%C3%AAn-c%C3%A1c-gateway)
+			- [Trên Gateway1 ( thực hiện trên cả Master và Slave)](#tr%C3%AAn-gateway1--th%E1%BB%B1c-hi%E1%BB%87n-tr%C3%AAn-c%E1%BA%A3-master-v%C3%A0-slave)
+			- [Trên Gateway 2](#tr%C3%AAn-gateway-2)
+			- [Trên VM1 - VPC1](#tr%C3%AAn-vm1---vpc1)
+			- [Trên VM2 VPC2](#tr%C3%AAn-vm2-vpc2)
+		- [2.2.3. Test](#223-test)
+- [Todo](#todo)
+
+
 ## 1. Giới thiệu
 
 ### 1.1. IPSec và VPN 
@@ -24,6 +46,25 @@ Nhiều VPN sử dụng IPsec protocol để thiết lập và chạy các kết
 
 ### 1.2. Strongswan 
 
+
+
+### 1.3. Keepalived
+
+Keepalived là một phần mềm định tuyến, được viết bằng ngôn ngữ C. Chương trình keepalived cho phép nhiều máy tính cùng chia sẻ một địa chỉ IP ảo với nhau theo mô hình Active – Passive (ta có thể cấu hình thêm một chút để chuyển thành mô hình Active – Active).
+
+Khi người dùng cần truy cập vào dịch vụ, người dùng chỉ cần truy cập vào địa chỉ IP ảo dùng chung này thay vì phải truy cập vào những địa chỉ IP thật của các thiết bị kia.
+
+Một số đặc điểm của phần mềm Keepalived:
+
+- Keepalived không đảm bảo tính ổn định của dịch vụ chạy trên máy chủ, nó chỉ đảm bảo rằng sẽ luôn có ít nhất một máy chủ chịu trách nhiệm cho IP dùng chung khi có sự cố xảy ra.
+- Keepalived thường được dùng để dựng các hệ thống HA (High Availability) dùng nhiều router/firewall/server để đảm bảo hệ thống được hoạt động liên tục.
+- Keepalived dùng giao thức _**VRRP (Virtual Router Redundancy Protocol)**_ để liên lạc giữa các thiết bị trong nhóm.
+
+Các router vật lý sử dụng chung VIP phải liên lạc với nhau bằng địa chỉ multicast _**224.0.0.18**_ bằng giao thức VRRP. Các router vật lý sẽ có độ ưu tiên (priority) trong khoảng từ 1 – 254, và router có độ ưu tiên cao nhất sẽ thành Master, các router còn lại sẽ thành các Slave/Backup, hoạt động ở chế độ chờ.
+
+Các router/server vật lý dùng chung VIP sẽ có 2 trạng thái là **MASTER/ACTIVE** và **BACKUP/SLAVE**. Cơ chế failover được xử lý bởi giao thức VRRP, khi khởi động dịch vụ, toàn bộ các server dùng chung VIP sẽ gia nhập vào một nhóm multicast. Nhóm multicast này dùng để gởi/nhận các gói tin quảng bá VRRP. Các router sẽ quảng bá độ ưu tiên (priority) của mình, server với độ ưu tiên cao nhất sẽ được chọn làm MASTER. Một khi nhóm đã có 1 MASTER thì MASTER này sẽ chịu trách nhiệm gởi các gói tin quảng bá VRRP định kỳ cho nhóm multicast.
+
+Nếu vì một sự cố gì đó mà các server BACKUP không nhận được các gói tin quảng bá từ MASTER trong một khoảng thời gian nhất định thì cả nhóm sẽ bầu ra một MASTER mới. MASTER mới này sẽ tiếp quản địa chỉ VIP của nhóm và gởi các gói tin ARP báo là nó đang giữ địa chỉ VIP này. Khi MASTER cũ hoạt động bình thường trở lại thì router này có thể lại trở thành MASTER hoặc trở thành BACKUP tùy theo cấu hình độ ưu tiên của các router.
 ## 2. Thực hành
 
 Tạo IPSec tunnel giữa 2 VPC `192.168.1.0/24` và `10.10.20.0/24` đảm bảo HA phía `Gateway 1`.
@@ -49,6 +90,7 @@ Tạo IPSec tunnel giữa 2 VPC `192.168.1.0/24` và `10.10.20.0/24` đảm bả
 
 Để đảm bảo HA phía Gateway 1, em sử dụng 2 VM là  `Master` và `Slave` chạy `Keepalived`. 
 Mặc định các IP `116.103.227.2` và `192.168.1.100` được gắn vào `Master` để thiết lập `IPSec tunnel`.
+
 Khi `Master` down, các IP trên sẽ được gán qua `Slave` và IPSec tunnel tự động được thiết lập lại.
  ![](images/model%20(2).png)
 
@@ -117,6 +159,12 @@ vrrp_instance VI_INT {
   garp_master_delay 1
 }
 ```
+ 
+**Giải thích: **
+
+- `vrrp_sync_group` : Nhóm các VRRP instance được đồng bộ, khi trạng thái 1 thành viên thay đổi, script `notify-ipsec.sh` sẽ được thực thi.
+- `vrrp_instance` :
+
 
 Trên `Slave`, config file `/etc/keepalived/keepalived.conf`
 
@@ -223,10 +271,15 @@ net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
 ```
 
+- Cấu hình đầu tiên cho phép chức năng chuyển tiếp gói tin IP giữa các giao diện mạng. GW giờ có chức năng như 1 router.
+- Cấu hình 2 để GW không chấp nhận gói tin chuyển hướng.
+- Cấu hình 3 để GW không gửi gói tin chuyển hướng tới máy khác.
+
 ```
 systcl -p
 ```
 ![](images/Pasted%20image%2020230828110235.png)
+
 **Cài đặt Strongswan**
 
 ```bash
@@ -274,6 +327,29 @@ conn gw1-gw2
         dpdaction=restart
 
 ```
+
+**Giải thích:**
+- **config setup** specifies general configuration information for IPSec which applies to all connections.
+- **charondebug = “all”** defines how much Charon debugging output should be logged.
+- **uniqueids = yes** states whether a particular participant ID should be kept unique.
+- **conn gw1-gw2** is the connection name.
+- **type=tunnel** is the type of connection.
+- **auto=start** allows the connection to start by default.
+- **keyexchange=ikev2** is the Internet key exchange version.
+- **authby=secret** authenticated with secret.
+- **left=116.103.227.2** is the public IP address of server A.
+- **leftsubnet=192.168.1.0/24** is the subnet/private IP of server A.
+- **right=116.103.229.76** is the public IP address of server B/remote server.
+- **rightsubnet=10.10.20.0/24** is the subnet/private IP of server B.
+- **ike=aes256-sha1-modp1024** is the type of encryption when the Internet key exchange.
+- **ikelifetime=28800s** is the time before the re-authentication of keys.
+- **esp=aes256-sha1!** is the encapsulation security suite of protocols.
+- **aggressive** states whether to use Aggressive or Main Mode.
+- **keyingtries** states the number of attempts that should be made to negotiate a connection.
+- **lifetime** defines how long a particular instance of a connection should last, from successful negotiation to expiry.
+- **dpddelay** specifies the time interval with which exchanges are sent to the peer.
+- **dpdtimeout** specifies the timeout interval to delete connections in case of inactivity.
+- **dpdaction** states how to use the Dead Peer Detection(DPD) protocol to manage the connection.
 
 File `/etc/ipsec.secrets`
 
@@ -425,6 +501,13 @@ Thực hiện stop/start `keepalived` trên `Master` để IPSec Tunnel thiết 
 
 ![](images/Pasted%20image%2020230828112938.png)
 **->** Mỗi lần IPSec Tunnel được thiết lập lại sẽ bị drop 2-3 gói tin.
+
+## Note todo
+- Đọc thêm về IPSec
+- Hiểu properties trong các config.
+- Tìm các cách tối ưu
+
+
 
 https://sysadmins.co.za/setup-a-site-to-site-ipsec-vpn-with-strongswan-on-ubuntu/
 
