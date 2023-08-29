@@ -41,8 +41,11 @@ Nhiều VPN sử dụng IPsec protocol để thiết lập và chạy các kết
 
 
 [Tham khảo 1](https://www.cloudflare.com/learning/network-layer/what-is-ipsec/#:~:text=IPsec%20tunnel%20mode%20is%20used,addition%20to%20the%20packet%20payload.)
+
 [Tham khảo 2](https://vietnix.vn/ipsec-la-gi/)
+
 [Đọc thêm](https://networklessons.com/cisco/ccie-routing-switching/ipsec-internet-protocol-security)
+
 
 ### 1.2. Strongswan 
 
@@ -272,9 +275,15 @@ Stop keepalived trên `Master`, các IP sẽ được gán cho `Slave`:
 
 #### 2.2.2. IPSec Tunnel
 
+
 ##### Trên các `Gateway`
 
+**Allow address pair:**
+
+Các VM có chức năng Port Security nên cần phải **Allow address pair** IP của VPC 2 trên interface private IP của VM Gateway 1 (và ngược lại)
+
 **Cho phép IP forwarding:**
+
 File `/etc/sysctl.conf`
 
 ```
