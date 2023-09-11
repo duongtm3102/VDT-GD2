@@ -390,7 +390,6 @@ Thiết lập `firewall rule` :
 iptables -t nat -A POSTROUTING -s 10.10.20.0/24 -d 192.168.1.0/24 -j MASQUERADE
 ```
 
-
 ##### Trên Gateway 2
 
 File `/etc/ipsec.conf`
