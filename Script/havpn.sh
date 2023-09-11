@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# keepalived variable
+
+
 
 VPN_CONN_NAME="gw1-gw2"
 VPN_LEFT_IP="10.0.0.172"
