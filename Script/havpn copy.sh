@@ -1,11 +1,11 @@
 #!/bin/bash
 
-HA_STATE="MASTER"
+HA_STATE="BACKUP"
 HA_PASS="abc123"
 HA_PUBLIC_VIP="10.0.0.62"
 HA_PRIVATE_VIP="192.168.10.85"
-HA_SRC_IP="192.168.10.174"
-HA_PEER_IP="192.168.10.253"
+HA_SRC_IP="192.168.10.253"
+HA_PEER_IP="192.168.10.174"
 HA_PEER_INTERFACE=$(ip route get $HA_PEER_IP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PUBLIC_INTERFACE=$(ip route get $HA_PUBLIC_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
