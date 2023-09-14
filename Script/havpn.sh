@@ -17,6 +17,17 @@ VPN_RIGHT_IP="10.0.0.82"
 VPN_RIGHT_SUBNET="192.168.20.0/24"
 VPN_PSK="4PXq1pNugWnXtFR3UYNHOXjM1xp6nJFDyP9ghAeuFe9oLOzRSL7fhX4XmUZn9QJPPfaHUP9McEKZPSxEnDoJGQ=="
 
+IKE_VERSION="ikev2"
+IKE_ENCRYPTION="aes256"
+IKE_AUTHENTICATION="sha1"
+IKE_DHGROUP="modp1024"
+IKE_LIFETIME="28800"
+
+IPSEC_ENCRYPTION="aes256"
+IPSEC_AUTHENTICATION="sha1"
+IPSEC_PROTOCOL="esp"
+IPSEC_LIFETIME="3600"
+
 # install keepalived
 apt-get install keepalived -y
 
@@ -120,18 +131,18 @@ config setup
 conn $VPN_CONN_NAME
         type=tunnel
         auto=start
-        keyexchange=ikev2
+        keyexchange=$IKE_VERSION
         authby=secret
         left=$VPN_LEFT_IP
         leftsubnet=$VPN_LEFT_SUBNET
         right=$VPN_RIGHT_IP
         rightsubnet=$VPN_RIGHT_SUBNET 
-        ike=aes256-sha1-modp1024!
-        esp=aes256-sha1!
+        ike=$IKE_ENCRYPTION-$IKE_AUTHENTICATION-$IKE_DHGROUP!
+        $IPSEC_PROTOCOL=$IPSEC_ENCRYPTION-$IPSEC_AUTHENTICATION!
         aggressive=no
         keyingtries=%forever
-        ikelifetime=28800s
-        lifetime=3600s
+        ikelifetime=$IKE_LIFETIME\s
+        lifetime=$IPSEC_LIFETIME\s
         dpddelay=30s
         dpdtimeout=120s
         dpdaction=restart
