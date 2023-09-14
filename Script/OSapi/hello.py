@@ -32,7 +32,11 @@ print(servers)
 #                     nics=[{"net-id": "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"}],
 #                     config_drive=True)
 
-port = {'name': "port4",'network_id': "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd",'admin_state_up': True}
+port = {'name': "port5",'network_id': "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd",'admin_state_up': True, 'port_security_enabled': False}
 out = neutron.create_port({'port':port})
 print(out['port']['id'])
 print(out['port']['fixed_ips'][0]['ip_address'])
+
+# portInfo = 'port4'
+# outInfo = neutron.show_port(f'?name={portInfo}')
+# print(outInfo['ports'][0]['id'])

@@ -1,16 +1,16 @@
 #!/bin/bash
 
-HA_STATE="MASTER"
+HA_STATE="BACKUP"
 HA_PASS="abc123"
-HA_PUBLIC_VIP="10.0.0.62"
-HA_PRIVATE_VIP="192.168.10.85"
-HA_SRC_IP="192.168.10.174"
-HA_PEER_IP="192.168.10.253"
+HA_PUBLIC_VIP="10.0.0.44"
+HA_PRIVATE_VIP="192.168.10.74"
+HA_SRC_IP="192.168.10.123"
+HA_PEER_IP="192.168.10.238"
 HA_PEER_INTERFACE=$(ip route get $HA_PEER_IP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PUBLIC_INTERFACE=$(ip route get $HA_PUBLIC_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 
-VPN_CONN_NAME="gw1-gw2"
+VPN_CONN_NAME="gw-gw"
 VPN_LEFT_IP=$HA_PUBLIC_VIP
 VPN_LEFT_SUBNET="192.168.10.0/24"
 VPN_RIGHT_IP="10.0.0.82"
@@ -91,7 +91,7 @@ NAME=$2
 STATE=$3
 case $STATE in
         "MASTER") /usr/sbin/ipsec restart
-				  exit 0	
+                  exit 0	
                   ;;
         "BACKUP") /usr/sbin/ipsec stop
 				  exit 0
