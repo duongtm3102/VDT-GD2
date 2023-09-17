@@ -1,14 +1,7 @@
 #!/bin/bash
 
-HA_STATE="BACKUP"
-HA_PASS="abc123"
-HA_PUBLIC_VIP="10.0.0.44"
-HA_PRIVATE_VIP="192.168.10.74"
-HA_SRC_IP="192.168.10.123"
-HA_PEER_IP="192.168.10.238"
-HA_PEER_INTERFACE=$(ip route get $HA_PEER_IP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
-HA_PUBLIC_INTERFACE=$(ip route get $HA_PUBLIC_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
-HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
+HA_PUBLIC_VIP="10.0.0.43"
+HA_PRIVATE_VIP="192.168.10.135"
 
 VPN_CONN_NAME="gw-gw"
 VPN_LEFT_IP=$HA_PUBLIC_VIP
@@ -27,85 +20,6 @@ IPSEC_ENCRYPTION="aes256"
 IPSEC_AUTHENTICATION="sha1"
 IPSEC_PROTOCOL="esp"
 IPSEC_LIFETIME="3600"
-
-# install keepalived
-apt-get install keepalived -y
-
-cat <<EOF > /etc/keepalived/keepalived.conf
-vrrp_sync_group G1 {
-    group {
-        VI_EXT
-        VI_INT
-    }
-    notify "/usr/local/sbin/notify-ipsec.sh"
-}
-
-#External
-vrrp_instance VI_EXT {
-  state $HA_STATE
-  interface $HA_PEER_INTERFACE
-  virtual_router_id 50
-  priority 150
-  advert_int 1
-  unicast_src_ip $HA_SRC_IP
-  unicast_peer {
-	$HA_PEER_IP
-  }
-  authentication {
-    auth_type PASS
-    auth_pass $HA_PASS
-  }
-  virtual_ipaddress {
-    $HA_PUBLIC_VIP dev $HA_PUBLIC_INTERFACE
-  }
-  nopreempt
-  garp_master_delay 1
-}
-
-#Internal
-vrrp_instance VI_INT {
-  state $HA_STATE
-  interface $HA_PEER_INTERFACE
-  virtual_router_id 55
-  advert_int 1
-  unicast_src_ip $HA_SRC_IP
-  unicast_peer {
-	$HA_PEER_IP
-  }
-  authentication {
-    auth_type PASS
-    auth_pass $HA_PASS
-  }
-  virtual_ipaddress {
-    $HA_PRIVATE_VIP dev $HA_PRIVATE_INTERFACE
-  }
-  nopreempt  
-  garp_master_delay 1
-}
-EOF
-
-cat <<\EOF > /usr/local/sbin/notify-ipsec.sh
-#!/bin/bash
-TYPE=$1
-NAME=$2
-STATE=$3
-case $STATE in
-        "MASTER") /usr/sbin/ipsec restart
-                  exit 0	
-                  ;;
-        "BACKUP") /usr/sbin/ipsec stop
-				  exit 0
-                  ;;
-        "FAULT")  /usr/sbin/ipsec stop
-                  exit 0
-                  ;;
-        *)        /usr/bin/logger "ipsec unknown state"
-                  exit 1
-                  ;;
-esac
-EOF
-
-systemctl restart keepalived.service
 
 
 #allow port forwarding

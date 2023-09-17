@@ -1,20 +1,20 @@
 #!/bin/bash
 
-HA_STATE="MASTER"
+HA_STATE="BACKUP"
 HA_PASS="abc123"
-HA_PUBLIC_VIP="10.0.0.62"
-HA_PRIVATE_VIP="192.168.10.160"
-HA_SRC_IP="192.168.10.170"
-HA_PEER_IP="192.168.10.180"
+HA_PUBLIC_VIP="10.0.0.21"
+HA_PRIVATE_VIP="192.168.10.224"
+HA_SRC_IP="192.168.10.223"
+HA_PEER_IP="192.168.10.49"
 HA_PEER_INTERFACE=$(ip route get $HA_PEER_IP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PUBLIC_INTERFACE=$(ip route get $HA_PUBLIC_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 
 VPN_CONN_NAME="gw-gw"
 VPN_LEFT_IP=$HA_PUBLIC_VIP
-VPN_LEFT_SUBNET="192.168.20.0/24"
-VPN_RIGHT_IP="10.0.0.100"
-VPN_RIGHT_SUBNET="192.168.30.0/24"
+VPN_LEFT_SUBNET="192.168.10.0/24"
+VPN_RIGHT_IP="10.0.0.82"
+VPN_RIGHT_SUBNET="192.168.20.0/24"
 VPN_PSK="4PXq1pNugWnXtFR3UYNHOXjM1xp6nJFDyP9ghAeuFe9oLOzRSL7fhX4XmUZn9QJPPfaHUP9McEKZPSxEnDoJGQ=="
 
 IKE_VERSION="ikev2"
@@ -91,7 +91,7 @@ NAME=$2
 STATE=$3
 case $STATE in
         "MASTER") /usr/sbin/ipsec restart
-				  exit 0	
+                  exit 0	
                   ;;
         "BACKUP") /usr/sbin/ipsec stop
 				  exit 0
@@ -104,6 +104,8 @@ case $STATE in
                   ;;
 esac
 EOF
+
+chmod a+x /usr/local/sbin/notify-ipsec.sh
 
 systemctl restart keepalived.service
 

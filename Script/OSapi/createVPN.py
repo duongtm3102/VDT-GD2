@@ -5,7 +5,7 @@ from neutronclient.v2_0 import client as nclient
 VERSION = "2.1"
 AUTH_URL = "http://116.103.226.54:35357/v3"
 USERNAME = 'admin'
-PASSWORD = "nZ0GYtYIjvzc3XDezQOQhUugDx6EweAOwsk9wHkF"
+PASSWORD = ""
 PROJECT_ID = "d9202c09602649de9b9d1775ac17c25e"
 USER_DOMAIN_NAME = 'Default'
 PROJECT_DOMAIN_NAME = 'Default'
@@ -19,7 +19,6 @@ auth = loader.load_from_options(auth_url=AUTH_URL,
 sess = session.Session(auth=auth)
 nova = client.Client(VERSION, session=sess)
 neutron = nclient.Client(session=sess)
-
 
 
 # function modify vpn.sh
@@ -76,70 +75,158 @@ def modify_vpn_variables(file_path, ha_info, vpn_info, ike_policy, ipsec_policy)
         with open(file_path, 'w') as file:
             file.writelines(modified_lines)
 
-        print(f"Modified {file_path} successfully.")
     except FileNotFoundError:
         print(f"File {file_path} not found.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         
-        
-        
+
 def create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
-    #create port for 2 instance and VIP port
-    publicNetworkID = "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"
-    portPublicVIPInfo = {'name': "publicVIP",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    portPublicAInfo = {'name': "publicA",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    portPublicBInfo = {'name': "publicB",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    
-    portPrivateVIPInfo = {'name': "privateVIP",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    portPrivateAInfo = {'name': "privateA",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    portPrivateBInfo = {'name': "privateB",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
-    
-    portPublicVIP = neutron.create_port({'port': portPublicVIPInfo})
-    portPublicA = neutron.create_port({'port': portPublicAInfo})
-    portPublicB = neutron.create_port({'port': portPublicBInfo})
-    
-    portPrivateVIP = neutron.create_port({'port': portPrivateVIPInfo})
-    portPrivateA = neutron.create_port({'port': portPrivateAInfo})
-    portPrivateB = neutron.create_port({'port': portPrivateBInfo})
-    
-    ha_info_master = {
-        'state': 'MASTER',
-        'pass': 'abc123',
-        'publicVIP': f"{portPublicVIP['port']['fixed_ips'][0]['ip_address']}",
-        'privateVIP': f"{portPrivateVIP['port']['fixed_ips'][0]['ip_address']}",
-        'srcIP': f"{portPrivateA['port']['fixed_ips'][0]['ip_address']}",
-        'peerIP': f"{portPrivateB['port']['fixed_ips'][0]['ip_address']}"
-    }
-    
-    ha_info_backup = {
-        'state': 'BACKUP',
-        'pass': 'abc123',
-        'publicVIP': f"{portPublicVIP['port']['fixed_ips'][0]['ip_address']}",
-        'privateVIP': f"{portPrivateVIP['port']['fixed_ips'][0]['ip_address']}",
-        'srcIP': f"{portPrivateB['port']['fixed_ips'][0]['ip_address']}",
-        'peerIP': f"{portPrivateA['port']['fixed_ips'][0]['ip_address']}"
-    }
-    
-    #create Master gateway
-    modify_vpn_variables("vpn.sh", ha_info_master, vpn_info, ike_policy, ipsec_policy)
-    nova.servers.create(name="gwMaster",
-                        image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
-                        flavor="2",
-                        userdata=open("./vpn.sh", "r"),
-                        nics=[{"port-id": f"{portPublicA['port']['id']}"}, {"port-id": f"{portPrivateA['port']['id']}"}],
-                        config_drive=True)
-    
-    #create Backup gateway
-    modify_vpn_variables("vpn.sh", ha_info_backup, vpn_info, ike_policy, ipsec_policy)
-    nova.servers.create(name="gwBackup",
-                        image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
-                        flavor="2",
-                        userdata=open("./vpn.sh", "r"),
-                        nics=[{"port-id": f"{portPublicB['port']['id']}"}, {"port-id": f"{portPrivateB['port']['id']}"}],
-                        config_drive=True)
-    
-    
+    try:
+        publicNetworkID = "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"
+        portPublicInfo = {'name': "VPNpublicIP",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False} 
+        portPrivateInfo = {'name': "VPNprivateIP",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+
+        portPublic = neutron.create_port({'port': portPublicInfo})
+        portPrivate = neutron.create_port({'port': portPrivateInfo})
+
+        print(f"Public IP: {portPublic['port']['fixed_ips'][0]['ip_address']}")
+        print(f"Private IP: {portPrivate['port']['fixed_ips'][0]['ip_address']}")
+
+        ha_info = {
+            'publicVIP': f"{portPublic['port']['fixed_ips'][0]['ip_address']}",
+            'privateVIP': f"{portPrivate['port']['fixed_ips'][0]['ip_address']}",
+        }
+        modify_vpn_variables("vpn.sh", ha_info, vpn_info, ike_policy, ipsec_policy)
+        gw = nova.servers.create(name="VPNgateway",
+                    image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                    flavor="2",
+                    userdata=open("./vpn.sh", "r"),
+                    nics=[{"port-id": f"{portPublic['port']['id']}"}, {"port-id": f"{portPrivate['port']['id']}"}],
+                    config_drive=True)
+        print("Gateway created!\n")
+
+        #save ID of created ports/VMs
+        resourceIDs = []
+        resourceIDs.append(f"PORT={portPublic['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPrivate['port']['id']}\n")
+
+        resourceIDs.append(f"INSTANCE={gw.id}\n")
+
+        with open("resourceInfo", 'w') as file:
+            file.writelines(resourceIDs)
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")        
+        
+
+def create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
+    try: 
+        #create port for 2 instance and VIP port
+        publicNetworkID = "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"
+        portPublicVIPInfo = {'name': "publicVIP",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        portPublicAInfo = {'name': "publicA",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        portPublicBInfo = {'name': "publicB",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        
+        portPrivateVIPInfo = {'name': "privateVIP",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        portPrivateAInfo = {'name': "privateA",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        portPrivateBInfo = {'name': "privateB",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
+        
+        portPublicVIP = neutron.create_port({'port': portPublicVIPInfo})
+        portPublicA = neutron.create_port({'port': portPublicAInfo})
+        portPublicB = neutron.create_port({'port': portPublicBInfo})
+
+        portPrivateVIP = neutron.create_port({'port': portPrivateVIPInfo})
+        portPrivateA = neutron.create_port({'port': portPrivateAInfo})
+        portPrivateB = neutron.create_port({'port': portPrivateBInfo})
+        
+        print("Network ports created!")
+        print(f"Public VIP: {portPublicVIP['port']['fixed_ips'][0]['ip_address']}")
+        print(f"Private VIP: {portPrivateVIP['port']['fixed_ips'][0]['ip_address']}")
+
+        ha_info_master = {
+            'state': 'MASTER',
+            'pass': 'abc123',
+            'publicVIP': f"{portPublicVIP['port']['fixed_ips'][0]['ip_address']}",
+            'privateVIP': f"{portPrivateVIP['port']['fixed_ips'][0]['ip_address']}",
+            'srcIP': f"{portPrivateA['port']['fixed_ips'][0]['ip_address']}",
+            'peerIP': f"{portPrivateB['port']['fixed_ips'][0]['ip_address']}"
+        }
+        
+        ha_info_backup = {
+            'state': 'BACKUP',
+            'pass': 'abc123',
+            'publicVIP': f"{portPublicVIP['port']['fixed_ips'][0]['ip_address']}",
+            'privateVIP': f"{portPrivateVIP['port']['fixed_ips'][0]['ip_address']}",
+            'srcIP': f"{portPrivateB['port']['fixed_ips'][0]['ip_address']}",
+            'peerIP': f"{portPrivateA['port']['fixed_ips'][0]['ip_address']}"
+        }
+        
+        #create Master gateway
+        modify_vpn_variables("havpn.sh", ha_info_master, vpn_info, ike_policy, ipsec_policy)
+        gwMaster = nova.servers.create(name="gwMaster",
+                            image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                            flavor="2",
+                            userdata=open("./havpn.sh", "r"),
+                            nics=[{"port-id": f"{portPublicA['port']['id']}"}, {"port-id": f"{portPrivateA['port']['id']}"}],
+                            config_drive=True)
+        print("Master GW created!\n")
+
+        #create Backup gateway
+        modify_vpn_variables("havpn.sh", ha_info_backup, vpn_info, ike_policy, ipsec_policy)
+        gwBackup = nova.servers.create(name="gwBackup",
+                            image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                            flavor="2",
+                            userdata=open("./havpn.sh", "r"),
+                            nics=[{"port-id": f"{portPublicB['port']['id']}"}, {"port-id": f"{portPrivateB['port']['id']}"}],
+                            config_drive=True)
+        print("Backup GW created!\n")
+
+        #save ID of created ports/VMs
+        resourceIDs = []
+        resourceIDs.append(f"PORT={portPublicVIP['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPublicA['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPublicB['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPrivateVIP['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPrivateA['port']['id']}\n")
+        resourceIDs.append(f"PORT={portPrivateB['port']['id']}\n")
+
+        resourceIDs.append(f"INSTANCE={gwMaster.id}\n")
+        resourceIDs.append(f"INSTANCE={gwBackup.id}\n")
+
+        with open("resourceInfo", 'w') as file:
+            file.writelines(resourceIDs)
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+        
+def delete_VPN():
+    try:
+        instances = []
+        ports = []
+        with open("resourceInfo", 'r') as file:
+            lines = file.readlines()
+
+        for line in lines:
+            if line.startswith('PORT='):
+                port_id = line.strip().split('=')[1]
+                ports.append(port_id)
+            elif line.startswith('INSTANCE='):
+                instance_id = line.strip().split('=')[1]
+                instances.append(instance_id)
+
+        for instance_id in instances:
+            nova.servers.delete(f"{instance_id}")
+            print(f"Instance {instance_id} deleted\n")
+
+        for port_id in ports:
+            neutron.delete_port(f"{port_id}")
+            print(f"Port {port_id} deleted\n")
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")    
+
 vpn_info = {'connName': 'gw-gw',
             'leftSubnet': '192.168.10.0/24',
             'rightIP': '10.0.0.82',
@@ -158,4 +245,7 @@ ipsec_policy = {'encryption': 'aes256',
                 'lifetime': '3600'     
 }   
 privateNetworkID="0ff6f2ab-fe02-4042-ad22-be7013f26383"
-create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
+create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
+
+# create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
+# delete_VPN()
