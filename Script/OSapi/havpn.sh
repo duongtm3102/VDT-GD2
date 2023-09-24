@@ -2,10 +2,10 @@
 
 HA_STATE="BACKUP"
 HA_PASS="abc123"
-HA_PUBLIC_VIP="10.0.0.21"
-HA_PRIVATE_VIP="192.168.10.224"
-HA_SRC_IP="192.168.10.223"
-HA_PEER_IP="192.168.10.49"
+HA_PUBLIC_VIP="10.10.10.193"
+HA_PRIVATE_VIP="192.168.10.242"
+HA_SRC_IP="192.168.10.155"
+HA_PEER_IP="192.168.10.37"
 HA_PEER_INTERFACE=$(ip route get $HA_PEER_IP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PUBLIC_INTERFACE=$(ip route get $HA_PUBLIC_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
 HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).*/\1/p')
@@ -13,7 +13,7 @@ HA_PRIVATE_INTERFACE=$(ip route get $HA_PRIVATE_VIP | sed -nr 's/.*dev ([^\ ]+).
 VPN_CONN_NAME="gw-gw"
 VPN_LEFT_IP=$HA_PUBLIC_VIP
 VPN_LEFT_SUBNET="192.168.10.0/24"
-VPN_RIGHT_IP="10.0.0.82"
+VPN_RIGHT_IP="10.10.10.190"
 VPN_RIGHT_SUBNET="192.168.20.0/24"
 VPN_PSK="4PXq1pNugWnXtFR3UYNHOXjM1xp6nJFDyP9ghAeuFe9oLOzRSL7fhX4XmUZn9QJPPfaHUP9McEKZPSxEnDoJGQ=="
 
@@ -28,16 +28,28 @@ IPSEC_AUTHENTICATION="sha1"
 IPSEC_PROTOCOL="esp"
 IPSEC_LIFETIME="3600"
 
+apt update -y
 # install keepalived
-apt-get install keepalived -y
+apt install keepalived -y
 
 cat <<EOF > /etc/keepalived/keepalived.conf
+vrrp_script check_ipsec {
+  script "/usr/local/sbin/check-ipsec.sh"
+  interval 2
+  fall 1
+  rise 2
+}
+
+
 vrrp_sync_group G1 {
     group {
         VI_EXT
         VI_INT
     }
     notify "/usr/local/sbin/notify-ipsec.sh"
+    track_script {
+      check_ipsec
+    }
 }
 
 #External
@@ -58,8 +70,9 @@ vrrp_instance VI_EXT {
   virtual_ipaddress {
     $HA_PUBLIC_VIP dev $HA_PUBLIC_INTERFACE
   }
-  nopreempt
+  #nopreempt
   garp_master_delay 1
+
 }
 
 #Internal
@@ -79,7 +92,7 @@ vrrp_instance VI_INT {
   virtual_ipaddress {
     $HA_PRIVATE_VIP dev $HA_PRIVATE_INTERFACE
   }
-  nopreempt  
+  #nopreempt  
   garp_master_delay 1
 }
 EOF
@@ -107,8 +120,26 @@ EOF
 
 chmod a+x /usr/local/sbin/notify-ipsec.sh
 
-systemctl restart keepalived.service
+cat <<\EOF > /usr/local/sbin/check-ipsec.sh
+#!/bin/bash
 
+# Check the status of the IPsec tunnel
+
+ipsec_status=$(ipsec status | sed '1!d')
+echo $ipsec_status
+
+# Check if the tunnel is down
+if [[ "$ipsec_status" == *"0 up"*  ]]; then
+        echo "IPsec tunnel is down. Switching to backup state."; exit 1
+else
+        echo "No action required."; exit 0
+fi
+EOF
+
+chmod a+x /usr/local/sbin/check-ipsec.sh
+
+
+systemctl restart keepalived.service
 
 #allow port forwarding
 cat <<EOF > /etc/sysctl.conf 
@@ -122,6 +153,7 @@ sysctl -p
 #install strongswan
 apt install strongswan -y
 
+ipsec stop
 # save old ipsec config
 cp /etc/ipsec.conf /etc/ipsec.conf.orig
 
@@ -156,7 +188,9 @@ $VPN_LEFT_IP $VPN_RIGHT_IP : PSK "$VPN_PSK"
 
 EOF
 
-#restart ipsec tunnel
-ipsec restart
+#start ipsec tunnel
+if [[ "$HA_STATE" == "MASTER" ]]; then
+      ipsec start
+fi
 #add firewall rule
 iptables -t nat -A POSTROUTING -s $VPN_RIGHT_SUBNET -d $VPN_LEFT_SUBNET -j MASQUERADE

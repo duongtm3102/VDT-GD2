@@ -3,12 +3,14 @@ from keystoneauth1 import session
 from novaclient import client
 from neutronclient.v2_0 import client as nclient
 VERSION = "2.1"
-AUTH_URL = "http://116.103.226.54:35357/v3"
+AUTH_URL = "http://116.103.227.31:5000"
 USERNAME = 'admin'
 PASSWORD = ""
-PROJECT_ID = "d9202c09602649de9b9d1775ac17c25e"
+PROJECT_ID = "56ca43b653c24437ab8c2889b1237d83"
 USER_DOMAIN_NAME = 'Default'
 PROJECT_DOMAIN_NAME = 'Default'
+PUBLIC_NETWORK_ID = "d2b875b3-88a2-4bf8-a38b-07cffdd4dbab"
+IMAGE_ID = "588da1e2-3d29-4752-be29-39e56b77422b"
 loader = loading.get_plugin_loader('password')
 auth = loader.load_from_options(auth_url=AUTH_URL,
                                username=USERNAME,
@@ -83,7 +85,7 @@ def modify_vpn_variables(file_path, ha_info, vpn_info, ike_policy, ipsec_policy)
 
 def create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
     try:
-        publicNetworkID = "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"
+        publicNetworkID = PUBLIC_NETWORK_ID
         portPublicInfo = {'name': "VPNpublicIP",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False} 
         portPrivateInfo = {'name': "VPNprivateIP",'network_id': f"{privateNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
 
@@ -99,7 +101,7 @@ def create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
         }
         modify_vpn_variables("vpn.sh", ha_info, vpn_info, ike_policy, ipsec_policy)
         gw = nova.servers.create(name="VPNgateway",
-                    image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                    image=IMAGE_ID,
                     flavor="2",
                     userdata=open("./vpn.sh", "r"),
                     nics=[{"port-id": f"{portPublic['port']['id']}"}, {"port-id": f"{portPrivate['port']['id']}"}],
@@ -123,7 +125,7 @@ def create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
 def create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
     try: 
         #create port for 2 instance and VIP port
-        publicNetworkID = "263c3ed0-6a54-47f1-b2ac-abcd64cc2ffd"
+        publicNetworkID = PUBLIC_NETWORK_ID
         portPublicVIPInfo = {'name': "publicVIP",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
         portPublicAInfo = {'name': "publicA",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
         portPublicBInfo = {'name': "publicB",'network_id': f"{publicNetworkID}",'admin_state_up': True, 'port_security_enabled': False}
@@ -165,7 +167,7 @@ def create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
         #create Master gateway
         modify_vpn_variables("havpn.sh", ha_info_master, vpn_info, ike_policy, ipsec_policy)
         gwMaster = nova.servers.create(name="gwMaster",
-                            image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                            image=IMAGE_ID,
                             flavor="2",
                             userdata=open("./havpn.sh", "r"),
                             nics=[{"port-id": f"{portPublicA['port']['id']}"}, {"port-id": f"{portPrivateA['port']['id']}"}],
@@ -175,7 +177,7 @@ def create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy):
         #create Backup gateway
         modify_vpn_variables("havpn.sh", ha_info_backup, vpn_info, ike_policy, ipsec_policy)
         gwBackup = nova.servers.create(name="gwBackup",
-                            image="0b1a905e-d1b9-4be3-abe8-e5ad8cd45927",
+                            image=IMAGE_ID,
                             flavor="2",
                             userdata=open("./havpn.sh", "r"),
                             nics=[{"port-id": f"{portPublicB['port']['id']}"}, {"port-id": f"{portPrivateB['port']['id']}"}],
@@ -229,7 +231,7 @@ def delete_VPN():
 
 vpn_info = {'connName': 'gw-gw',
             'leftSubnet': '192.168.10.0/24',
-            'rightIP': '10.0.0.82',
+            'rightIP': '10.10.10.190',
             'rightSubnet': '192.168.20.0/24',
             'psk': "4PXq1pNugWnXtFR3UYNHOXjM1xp6nJFDyP9ghAeuFe9oLOzRSL7fhX4XmUZn9QJPPfaHUP9McEKZPSxEnDoJGQ=="
 }
@@ -244,8 +246,9 @@ ipsec_policy = {'encryption': 'aes256',
                 'protocol': 'esp',
                 'lifetime': '3600'     
 }   
-privateNetworkID="0ff6f2ab-fe02-4042-ad22-be7013f26383"
-create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
+privateNetworkID="cd907a3a-6b3a-46cb-b181-e7192fe5bfe7"
+# create_HAVPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
 
 # create_VPN(privateNetworkID, vpn_info, ike_policy, ipsec_policy)
-# delete_VPN()
+  
+delete_VPN()
