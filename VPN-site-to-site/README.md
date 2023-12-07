@@ -45,7 +45,7 @@ openssl rand -base64 64
 /etc/ipsec.secrets
 
 ```bash
-116.103.229.149 192.168.200.130 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJDSTLEpjR9VEgL7aTwy8gLQ=="
+116.103.229.149 192.168.200.130 : PSK "secret"
 ```
 
 ipsec.conf
@@ -117,7 +117,7 @@ IP public 1 : 116.103.229.76
 /etc/ipsec.secrets
 
 ```bash
-116.103.229.76 116.103.229.149 : PSK "rdH72MI1yLW9zcLsUpj6E6hcH8T4UQHQC/td2Jiyhe8yDPTuBk9dtO+JWlJ2P1wJDSTLEpjR9VEgL7aTwy8gLQ=="
+116.103.229.76 116.103.229.149 : PSK "secret"
 ```
 
 ipsec.conf
@@ -158,13 +158,11 @@ https://sysadmins.co.za/setup-a-site-to-site-ipsec-vpn-with-strongswan-on-ubuntu
 
 ![](images/Pasted%20image%2020230825080147.png)
 
-
 ## HA VPN S2S
 
 ```bash
 apt-get install keepalived
 ```
-
 
 ### GW1
 
@@ -217,11 +215,10 @@ vrrp_instance VI_INT {
   virtual_ipaddress {
     192.168.1.100/24 dev eth1
   }
-  nopreempt  
+  nopreempt
   garp_master_delay 1
 }
 ```
-
 
 ## GW1 Backup
 
@@ -283,15 +280,12 @@ vrrp_instance VI_INT {
 }
 ```
 
-
 ![](images/Pasted%20image%2020230825083201.png)
-
 
 ```bash
 # /etc/sysctl.conf
 net.ipv4.ip_nonlocal_bind = 1
 ```
-
 
 ```
 config setup
@@ -306,7 +300,7 @@ conn gw1-gw2
         left=116.103.227.2
         leftsubnet=192.168.1.0/24
         right=116.103.229.76
-        rightsubnet=10.10.20.0/24 
+        rightsubnet=10.10.20.0/24
         ike=aes256-sha1-modp1024!
         esp=aes256-sha1!
         aggressive=no
@@ -319,9 +313,8 @@ conn gw1-gw2
 
 ```
 
-
-
 `/usr/local/sbin/notify-ipsec.sh`
+
 ```
 #!/bin/bash
 TYPE=$1
@@ -329,7 +322,7 @@ NAME=$2
 STATE=$3
 case $STATE in
         "MASTER") /usr/sbin/ipsec restart
-				  exit 0	
+				  exit 0
                   ;;
         "BACKUP") /usr/sbin/ipsec stop
 				  exit 0
@@ -342,8 +335,6 @@ case $STATE in
                   ;;
 esac
 ```
-
-
 
 https://serverfault.com/questions/653016/keepalived-configuration-for-vrrp
 ![](images/Pasted%20image%2020230825175741.png)
